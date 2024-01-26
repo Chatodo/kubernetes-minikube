@@ -1,8 +1,61 @@
-# README pour la Configuration Kubernetes
+<div id="user-content-toc">
+    <ul>
+        <li><a href="#publish-the-image-to-the-docker-hub">1. Publish the image to the Docker Hub</a> </li>
+        <li><a href="#kubernetes-deployment">2. Kubernetes deployment</a></li>
+        <li><a href="#servicemesh"> 3. Servicemesh </li>
+    </ul>
+</div>
 
-Le fichier ```myservice.yaml``` est le fichier de configuration.
+## Publish the image to the Docker Hub
+[Source](https://github.com/charroux/kubernetes-minikube?tab=readme-ov-file#publish-the-image-to-the-docker-hub)
 
-## Etapes
+
+Retreive the image ID: ```docker images```
+
+Tag the docker image: ```docker tag imageID yourDockerHubName/imageName:version```
+
+Example: ```docker tag 900250cf7694 chatodo/myservice:1```
+
+Login to docker hub:
+
+```docker login -u yourDockerHubName --password-stdin```
+
+Push the image to the docker hub: ```docker push yourDockerHubName/imageName:version```
+
+```docker push chatodo/myservice:1``` ou ```docker push chatodo/myservice:latest```
+
+## Kubernetes deployment
+Fichier : `myservice-deployment.yml`
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myservice
+  template:
+    metadata:
+      labels:
+        app: myservice
+    spec:
+      containers:
+        - image: chatodo/myservice:1
+          imagePullPolicy: IfNotPresent
+          name: myservice
+      restartPolicy: Always
+```
+- `apiVersion`: Spécifie la version de l'API de Kubernetes utilisée pour créer cet objet
+- `kind`: Type de l'objet Kubernetes que ce fichier décrit (ici Deployment)
+- `replicas`: Nombre de répliques du Pod à maintenir
+- `matchLabels`: Les labels utilisés pour faire correspondre les Pods
+- `image`: Nom de l'image Docker à utiliser pour le conteneur
+- `imagePullPolicy`: Politique de téléchargement de l'image. *IfNotPresent* signifie que l'image sera téléchargée uniquement si elle n'est pas déjà présente localement
+- `restartPolicy`: Politique de redémarrage des conteneurs du Pod. *Always* signifie que le conteneur sera redémarré automatiquement en cas de défaillance
+## Servicemesh
+### Etapes
 1. Démarrage de Minikube avec Docker :
 ```
 minikube start --cpus=2 --memory=5000 --driver=docker
@@ -25,11 +78,11 @@ kubectl -n istio-system port-forward deployment/istio-ingressgateway 31380:8080
 http://localhost:31380/myservice/
 ```
 ---
-## Explication (celle du tableau)
-![Alt text](tableau.png)
+### Explication (celle du tableau)
+![Explication](tableau.png)
 
-## Explication du yaml
-
+### Explication du yaml
+Fichier ```myservice.yaml```
 1. Deployment
 ```yaml
 apiVersion: apps/v1
@@ -52,10 +105,6 @@ spec:
                     name: myservice
             restartPolicy: Always
 ```
-Ce déploiement crée une instance (*replicas: 1*) du service myservice. 
-Il utilise l'image Docker présente sur Dockerhub (*chatodo/myservice:1*) et télécharge l'image si elle n'est pas présente (*imagePullPolicy: IfNotPresent*). 
-Le service est configuré pour redémarrer automatiquement en cas de défaillance (*restartPolicy: Always*).
-
 2. Service
 ```yaml
 apiVersion: v1
@@ -72,8 +121,11 @@ spec:
         app: myservice
     type: NodePort
 ```
-Ce service expose le *myservice* sur le port *8080*, et est accessible en dehors du cluster Kubernetes via un *NodePort* sur le port *31280*. 
-Le protocole utilisé est TCP.
+- `nodePort`: Spécifie le port sur lequel le service sera exposé à l'extérieur du cluster Kubernetes. Ici, le nodePort est 31280, ce qui signifie que le service sera accessible via ce port sur l'adresse IP de n'importe quel nœud du cluster
+- `port`: Le port interne du cluster sur lequel le service est exposé. Dans ce cas, 8080 est le port sur lequel le service est exposé à l'intérieur du cluster
+- `targetPort`: Le port sur lequel le Pod cible est à l'écoute. Cela permet au service de router le trafic vers le bon port au sein du Pod
+- `selector.app`:  Route le trafic vers les Pods qui correspondent aux labels spécifiés ici
+- `type`: Indique le type de service (NodePort est un type qui expose le service sur un port statique sur chaque nœud du cluster)
 
 3. VirtualService (Istio)
 ```yaml
@@ -90,7 +142,6 @@ spec:
     - match:
         - uri:
                 prefix: /myservice/ # le gateway va rediriger vers le service myservice
-    #        regex: '\/carservice\/*'
         rewrite:
             uri: /
         route:
@@ -99,9 +150,11 @@ spec:
                     number: 8080
                 host:  myservice.default.svc.cluster.local # DNS qui est démaré par défaut et il s'enregistre avec ce nom
 ```
-Le *VirtualService* définit des règles pour router le trafic vers *myservice*. 
-Il redirige les requêtes avec le préfixe */myservice/* vers ce service. 
-Toutes les requêtes arrivant à ce chemin sont réécrites pour avoir un URI (Uniform Resource Identifier), ici racine (/), et sont ensuite routées vers le port *8080* de *myservice.default.svc.cluster.local.* Ce DNS est défini par défaut dans Kubernetes.
+- `hosts`: Définit les hôtes pour lesquels les règles de routage s'appliquent. `*` indique que les règles s'appliqueront à tous les hôtes
+- `gateways`: Référence aux *gateways Istio* qui sont utilisées pour gérer l'entrée du trafic. Ici, *microservice-gateway* est le nom de la gateway définie plus loin dans la configuration
+- `match.uri.prefix`: Spécifie le chemin d'accès utilisé pour faire correspondre les requêtes entrantes
+- `rewrite.uri`: Le chemin est écrit en /, ce qui signifie que le préfixe */myservice/* est supprimé du chemin de la requête.
+- `route.destination`: Indique la destination du trafic après application des règles de routage et de réécriture. Ici, le trafic est dirigé vers le port *8080* du service *myservice.default.svc.cluster.local*
 
 4. Gateway (Istio)
 ```yaml
@@ -120,6 +173,5 @@ spec:
         hosts:
         - "*"
 ```
-Le *Gateway* définit un point d'entrée pour le trafic externe. 
-Dans ce cas, il écoute sur le port *80* (HTTP) et accepte le trafic de tous les hôtes ("*").
-Le sélecteur *istio: ingressgateway* indique qu'il utilise l'*IngressGateway d'Istio*.
+- `istio: ingressgateway`: Cela signifie que cette configuration de Gateway s'appliquera aux pods d'Ingress Gateway d'Istio qui ont le label *istio=ingressgateway*
+- `hosts`: Spécifie les hôtes qui sont autorisés à passer par cette Gateway. `*` signifie que la Gateway acceptera le trafic pour tous les domaines.
