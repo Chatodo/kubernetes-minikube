@@ -26,11 +26,11 @@ metadata:
 spec:
   ports:
     - nodePort: 31280
-      port: 8080
+      port: 8080 # port du service
       protocol: TCP
-      targetPort: 8080
+      targetPort: 8080 # port de l'image
   selector:
-    app: myservice
+    app: myservice # nom du pod
   type: NodePort
   
 ---
@@ -42,7 +42,7 @@ spec:
   hosts:
   - "*"
   gateways:
-  - microservice-gateway
+  - gateway
   http:
   - match:
     - uri:
@@ -54,12 +54,12 @@ spec:
     - destination:
         port:
           number: 8080
-        host:  myservice.default.svc.cluster.local # DNS qui est démaré par défaut et il s'enregistre avec ce nom
+        host:  myservice.default.svc.cluster.local # DNS qui est démaré par défaut et il s'enregistre avec ce nom, doit commencé par le nom du service
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
-  name: microservice-gateway
+  name: gateway # doit être équivalente à celui dans le virtual service
 spec:
   selector:
     istio: ingressgateway
