@@ -1,8 +1,9 @@
-# Utiliser l'image officielle de Nginx
 FROM nginx:latest
 
-# COPY nginx.conf /etc/nginx/nginx.conf
-
-COPY ./static /usr/share/nginx/html
+# Copier les fichiers statiques dans le dossier de serveur Nginx
+COPY frontend /usr/share/nginx/html
 
 EXPOSE 80
+
+# Démarrer Nginx
+CMD ["nginx", "-g", "daemon off;"]

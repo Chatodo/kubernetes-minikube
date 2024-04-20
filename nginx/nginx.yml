@@ -1,57 +1,41 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flask-api
+  name: frontend-nginx
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: flask-api
+      app: frontend-nginx
   template:
     metadata:
       labels:
-        app: flask-api
+        app: frontend-nginx
     spec:
       containers:
-      - name: flask-api
-        image: chatodo/flask-api:latest
+      - name: frontend-nginx
+        image: chatodo/frontend-nginx:latest
         ports:
-        - containerPort: 5000
+        - containerPort: 80
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: flask-api
+  name: frontend-nginx
 spec:
   type: NodePort
   ports:
-  - port: 5000
-    targetPort: 5000
+  - port: 80
+    targetPort: 80
   selector:
-    app: flask-api
-
----
-apiVersion: networking.istio.io/v1alpha3
-kind: Gateway
-metadata:
-  name: flask-gateway
-spec:
-  selector:
-    istio: ingressgateway
-  servers:
-  - port:
-      number: 80
-      name: http
-      protocol: HTTP
-    hosts:
-    - "*"
+    app: frontend-nginx
 
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: flask-virtualservice
+  name: web-virtualservice
 spec:
   hosts:
   - "*"
@@ -60,7 +44,17 @@ spec:
   http:
   - match:
     - uri:
-        prefix: /api
+        exact: "/"
+    - uri:
+        prefix: "/static"
+    route:
+    - destination:
+        host: frontend-nginx.default.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
+        prefix: "/api"
     route:
     - destination:
         host: flask-api.default.svc.cluster.local
