@@ -6,18 +6,20 @@ from flask_session import Session
 
 app = Flask(__name__, instance_relative_config=True)
 
-# Configuration de l'application (fichier : flask/instance/config.py)
-app.config.from_pyfile('config.py')
-
 # Flask MySQL
 mysql = MySQL(app)
 
-# Flask Login
+# flask_bcrypy : Gestion du hash des mots de passe
 bcrypt = Bcrypt(app)
+
+# Flask Login
+# Chargement de la configuration de flask_login (fichier : instance/config.py)
+app.config.from_pyfile('config.py')
 login_manager = LoginManager()
 login_manager.init_app(app)
 
 # Flask Session avec CacheLib
+# Chargement de la configuration de flask_session (fichier : instance/config_sessions.py)
 app.config.from_pyfile('config_sessions.py')
 Session(app)
 
@@ -28,8 +30,8 @@ class User(UserMixin):
 	Représente un utilisateur.
 
 	Attributs:
-		id (int): L'ID de l'utilisateur.
-		email (str): Email de l'utilisateur.
+		id (int): L'id de l'utilisateur.
+		email (str): email/pseudo de l'utilisateur.
 		password (str): Mot de passe de l'utilisateur.
 
 	Méthodes:
@@ -42,79 +44,66 @@ class User(UserMixin):
 
 		Args:
 			id (int): L'ID de l'utilisateur.
-			email (str): Le nom d'utilisateur de l'utilisateur.
+			email (str): L'email/pseudo de l'utilisateur.
 			password (str): Le mot de passe de l'utilisateur.
 		"""
 		self.id = id
 		self.email = email
 		self.password = password
 
-	@staticmethod
-	def get_user(email):
+	@classmethod
+	def get_user(cls, id=None, email=None):
 		"""
-		Récupère un utilisateur (email) depuis la base de données.
-
+		Récupère un utilisateur, soit par son ID, soit par son email.
+		
 		Args:
-			email (str): Email de l'utilisateur.
+			id (int): L'ID de l'utilisateur.
+			email (bool): True si on veut récupérer l'utilisateur par son email, False par défaut.
 
 		Returns:
-			User: L'utilisateur correspondant à l'email.
+			User: Un objet User si l'utilisateur existe, None sinon.
 		"""
 		cur = mysql.connection.cursor()
-		cur.execute("SELECT * FROM utilisateurs WHERE email = %s", (email,))
+		if email:
+			cur.execute("SELECT * FROM utilisateurs WHERE email = %s", [email])
+		elif id:
+			cur.execute("SELECT * FROM utilisateurs WHERE id = %s", [id])
 		result = cur.fetchone()
 		cur.close()
-		if result:
-			return User(*result)
-		return None
+		return cls(*result) if result else None
 
+# Loader de l'utilisateur pour Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
-	"""
-	Cette fonction est utilisée pour charger un utilisateur depuis la base de données.
+	return User.get_user(id=user_id)
 
-	Args:
-		user_id (int): L'ID de l'utilisateur.
-
-	Returns:
-		User: L'utilisateur correspondant à l'ID.
-	"""
-	cur = mysql.connection.cursor()
-	cur.execute("SELECT * FROM utilisateurs WHERE id = %s", (user_id,))
-	result = cur.fetchone()
-	cur.close()
-	if result:
-		return User(*result)
-	return None
-
-# Route pour connexion
+#### Route API ####
+# Connexion
 @app.route('/api/login', methods=['POST'])
 def login():
-	email = request.json.get('email')
-	password = request.json.get('password')
-	if not email or not password:
+	data = request.get_json()
+	if not data:
 		abort(400)
-	user = User.get_user(email)
-	if user and bcrypt.check_password_hash(user.password, password):
+	user = User.get_user(email=data.get('email'))
+	if user and bcrypt.check_password_hash(user.password, data.get('password')):
 		login_user(user, remember=True)
-		app.session_interface.regenerate(session)
 		session.permanent = True
 		return jsonify({'success': True, 'message': 'Connexion réussie.'})
-	return  jsonify({'error': True, 'message': 'Mauvais identifiants.'}), 401
+	return jsonify({'success': False, 'message': 'Mauvais identifiants.'}), 401
 
 # Route pour s'inscrire
 @app.route('/api/register', methods=['POST'])
 def register():
-	email = request.json.get('email')
-	password = request.json.get('password')
-	if not email or not password:
+	data = request.get_json()
+	if not data:
 		abort(400)
 	cur = mysql.connection.cursor()
-	cur.execute("SELECT * FROM utilisateurs WHERE email = %s", (email,))
+	cur.execute("SELECT * FROM utilisateurs WHERE email = %s", (data['email'],))
 	if cur.fetchone():
 		cur.close()
-		return  jsonify({'error': True, 'message': 'Email déjà utilisé.'}), 400
-	cur.execute("INSERT INTO utilisateurs (email, password) VALUES (%s, %s)", (email, bcrypt.generate_password_hash(password).decode('utf-8')))
+		return jsonify({'success': False, 'message': 'Email déjà utilisé.'}), 400
+	hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+	cur.execute("INSERT INTO utilisateurs (email, password) VALUES (%s, %s)", (data['email'], hashed_password))
 	mysql.connection.commit()
 	cur.close()
 	return jsonify({'success': True, 'message': 'Inscription réussie.'})
@@ -129,10 +118,7 @@ def logout():
 # Route pour vérifier si l'utilisateur est connecté
 @app.route('/api/status', methods=['GET'])
 def status():
-    if current_user.is_authenticated:
-        return jsonify({'success': True})
-    else:
-        return jsonify({'success': False})
+	return jsonify({'success': current_user.is_authenticated})
 
 #######################################################################################################
 
@@ -146,12 +132,13 @@ class Produit:
 		id (int): L'ID du produit.
 		nom (str): Le nom du produit.
 		prix (float): Le prix du produit.
+		stock (int): La quantité du produit.
 
 	Méthodes:
 		get_all_produits(): Récupère tous les produits depuis la base de données.
 	"""
 
-	def __init__(self, id, nom, prix):
+	def __init__(self, id, nom, prix, stock):
 		"""
 		Initialise une nouvelle instance de la classe Produit.
 
@@ -159,35 +146,36 @@ class Produit:
 			id (int): L'ID du produit.
 			nom (str): Le nom du produit.
 			prix (float): Le prix du produit.
+			stock (int): La quantité du produit.
 		"""
 		self.id = id
 		self.nom = nom
 		self.prix = prix
+		self.stock = stock
 
 	@staticmethod
 	def get_all_produits():
 		"""
 		Récupère tous les produits depuis la base de données.
+		self.stock > 0 pour ne récupérer que les produits en stock.
 
 		Returns:
-			list: Une liste de tous les produits.
+			list: Une liste de tous les produits qui a stock > 0.
 		"""
 		cur = mysql.connection.cursor()
-		cur.execute("SELECT * FROM produits")
+		cur.execute("SELECT * FROM produits WHERE stock > 0")
 		result = cur.fetchall()
 		cur.close()
 		return [Produit(*row) for row in result]
 
-# Route pour récupérer tous les produits via une requête GET
+#### Route API ####
+# Route pour récupérer tous les produits
 @app.route('/api/produits', methods=['GET'])
 @login_required
 def get_produits():
-	try:
-		produits = Produit.get_all_produits()
-		return jsonify([{'id': p.id, 'nom': p.nom, 'prix': p.prix} for p in produits])
-	except Exception as e:
-		app.logger.error(f"Erreur lors de la récupération des produits: {e}")
-		return jsonify([]), 500
+	produits = Produit.get_all_produits()
+	return jsonify([{'id': p.id, 'nom': p.nom, 'prix': p.prix} for p in produits])
+
 #######################################################################################################
 
 if __name__ == '__main__':

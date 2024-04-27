@@ -16,6 +16,9 @@
 			border: 1px solid #ddd;
 			border-radius: 5px;
 		}
+		#loginPrompt {
+        	display: none;
+    	}
 	</style>
 </head>
 <body>
@@ -166,7 +169,7 @@
 					},
 					error: function(xhr, status, error) {
 						console.log('Error : Server Response:', xhr.responseText);
-						alert('Erreur lors de l\'inscription');
+						alert('Erreur lors de l\'inscription (email déjà utilisé ?');
 					}
 				});
 			});

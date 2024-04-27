@@ -6,12 +6,13 @@ CREATE TABLE utilisateurs (
 	email VARCHAR(255) NOT NULL,
 	password VARCHAR(255) NOT NULL
 );
-INSERT INTO utilisateurs (email, password) VALUES ('ivan', '$2b$12$pgBJ1KbKNouK40KGkOLKN.RLR6gdS5jvpuRsO.v1ePvahnJQPzETS');
 
 CREATE TABLE produits (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	nom VARCHAR(255) NOT NULL,
-	prix DECIMAL(10, 2) NOT NULL
+	prix DECIMAL(10, 2) NOT NULL,
+	stock INT NOT NULL DEFAULT 0
 );
-INSERT INTO produits (nom, prix) VALUES ('Livre', 19.99);
-INSERT INTO produits (nom, prix) VALUES ('Ordinateur', 999.99);
+INSERT INTO produits (nom, prix, stock) VALUES ('Livre', 19.99, 10);
+INSERT INTO produits (nom, prix, stock) VALUES ('Ordinateur', 999.99, 2);
+INSERT INTO produits (nom, prix, stock) VALUES ('Xbox Series X', 500, 0);
