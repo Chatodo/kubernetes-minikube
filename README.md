@@ -1,10 +1,15 @@
 # 🚧 PROJET/RAPPORT EN CONSTRUCTION/REDACTION 👷
+https://docs.google.com/document/d/1Ki8N0ItqMbY1fsAPlTZ0nmYLW9LZNwK3USsC3wWIizU/edit
 # Sommaire : 
+- [DB]
 - [Ajouter un deuxième service en local](#ajouter-un-deuxième-service-en-local) 
 - [Ajouter une gateway en local](#ajouter-une-gateway-en-local) 
 - [Ajouter un service en local](#ajouter-un-service-en-local) 
 - [Déploiement](#déploiement) 
 - [Utilisation](#utilisation) 
+
+https://github.com/charroux/noops/tree/main/mysql#3-connexion-au-server-mysql
+
 ## Ajouter un deuxième service en local 
 Le deuxième service, le frontend via Nginx. 
 - `nginx/nginx.yml` : configuration de déploiement pour Kubernetes.

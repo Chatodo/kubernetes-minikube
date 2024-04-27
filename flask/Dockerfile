@@ -2,7 +2,9 @@ FROM python:latest
 
 RUN apt-get update && apt-get install -y \
 	python3-dev \
-	build-essential
+	build-essential \
+	default-libmysqlclient-dev \ 
+	pkg-config
 
 WORKDIR /app
 

@@ -1,42 +1,243 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Produits</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        h1 {
-            color: navy;
-        }
-        .product {
-            margin: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-    </style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+	<title>Projet</title>
+	<style>
+		.container {
+			max-width: 400px;
+			padding-top: 20px;
+		}
+		.product {
+			margin: 10px;
+			padding: 10px;
+			border: 1px solid #ddd;
+			border-radius: 5px;
+		}
+	</style>
 </head>
 <body>
-    <h1>Liste des produits</h1>
-    <div id="products"></div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            fetch('http://localhost:31380/api/produits')
-            .then(response => response.json())
-            .then(data => {
-                const container = document.getElementById('products');
-                data.forEach(product => {
-                    const productDiv = document.createElement('div');
-                    productDiv.className = 'product';
-                    productDiv.innerHTML = `<h2>${product.nom}</h2><p>${product.prix} €</p>`;
-                    container.appendChild(productDiv);
-                });
-            })
-            .catch(error => console.error('Error loading the products:', error));
-        });
-    </script>
+	<!-- Navbar -->
+	<nav class="navbar navbar-expand-lg navbar-light bg-light">
+		<div class="container-fluid">
+			<a class="navbar-brand" href="#">Projet Web</a>
+			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarNav">
+				<ul class="navbar-nav">
+					<li class="nav-item">
+						<a class="nav-link active" aria-current="page" href="#" id="loginButton">Se connecter</a>
+					</li>
+					<li class="nav-item">
+                        <a class="nav-link" href="#" id="registerButton">S'inscrire</a>
+                    </li>
+					<li class="nav-item">
+						<a class="nav-link" href="#" id="logoutButton" style="display: none;">Se déconnecter</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</nav>
+
+	<!-- Login -->
+	<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="loginModalLabel">Se connecter</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<form id="loginForm">
+						<div class="mb-3">
+							<label for="email" class="form-label">Adresse-mail</label>
+							<input type="text" class="form-control" id="email" required>
+						</div>
+						<div class="mb-3">
+							<label for="password" class="form-label">Mot de passe</label>
+							<input type="password" class="form-control" id="password" required>
+						</div>
+						<button type="submit" class="btn btn-primary">Se connecter</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Register -->
+	<div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="registerModalLabel">S'inscrire</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<form id="registerForm">
+						<div class="mb-3">
+							<label for="registerEmail" class="form-label">Adresse-mail</label>
+							<input type="text" class="form-control" id="registerEmail" required>
+						</div>
+						<div class="mb-3">
+							<label for="registerPassword" class="form-label">Mot de passe</label>
+							<input type="password" class="form-control" id="registerPassword" required>
+						</div>
+						<button type="submit" class="btn btn-primary">S'inscrire</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Visible que pour les connectes -->
+	<div id="productSection" style="display: none;">
+		<h1>Liste des produits</h1>
+		<div id="products"></div>
+	</div>
+
+	<!-- Message pour non-connectes -->
+    <div id="loginPrompt" class="container text-center">
+        <h4 class="py-5">Veuillez vous connecter pour accéder aux produits.</h4>
+    </div>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+	<script>
+		$(document).ready(function() {
+			// Ouvrir les modals
+			$('#registerButton').click(function() {
+				$('#registerModal').modal('show');
+			});
+			$('#loginButton').click(function() {
+				$('#loginModal').modal('show');
+			});
+
+			// Vérifier si l'utilisateur est connecté
+			checkLoginStatus();
+			function checkLoginStatus() {
+				$.ajax({
+					url: 'http://localhost:31380/api/status',
+					type: 'GET',
+					success: function(data) {
+						if (data.success) {
+							$('#loginButton').hide();
+							$('#registerButton').hide();
+							$('#logoutButton').show();
+							$('#productSection').show();
+							$('#loginPrompt').hide();
+							loadProducts();
+						}
+						else {
+							$('#loginButton').show();
+							$('#registerButton').show();
+							$('#logoutButton').hide();
+							$('#productSection').hide();
+							$('#loginPrompt').show();
+						}
+					},
+					error: function(xhr, status, error) {
+						console.log('Error : Server Response:', xhr.responseText);
+					}
+				});
+			}
+
+
+			// Gérer l'inscription
+			$('#registerForm').on('submit', function(event) {
+				event.preventDefault();
+				var email = $('#registerEmail').val();
+				var password = $('#registerPassword').val();
+				var dataToSend = JSON.stringify({ email: email, password: password });
+				$.ajax({
+					url: 'http://localhost:31380/api/register',
+					type: 'POST',
+					contentType: 'application/json',
+					data: dataToSend,
+					dataType: 'json',
+					success: function(data) {
+						console.log('Server Response:', data);
+						if (data.success) {
+							$('#registerModal').modal('hide');
+							alert('Inscription réussie. Vous pouvez vous connecter maintenant.');
+						}
+					},
+					error: function(xhr, status, error) {
+						console.log('Error : Server Response:', xhr.responseText);
+						alert('Erreur lors de l\'inscription');
+					}
+				});
+			});
+
+			// Gérer la connexion
+			$('#loginForm').on('submit', function(event) {
+				event.preventDefault();
+				var email = $('#email').val();
+				var password = $('#password').val();
+				var dataToSend = JSON.stringify({ email: email, password: password });
+				$.ajax({
+					url: 'http://localhost:31380/api/login',
+					type: 'POST',
+					contentType: 'application/json',
+					data: dataToSend,
+					dataType: 'json',
+					success: function(data) {
+						console.log('Server Response:', data);
+						if (data.success) {
+							$('#loginModal').modal('hide');
+							$('#loginPrompt').hide();
+							$('#productSection').show();
+							loadProducts();
+							$('#loginButton').hide();
+							$('#registerButton').hide();
+							$('#logoutButton').show();
+						}
+					},
+					error: function(xhr, status, error) {
+						console.log('Error : Server Response:', xhr.responseText);
+						alert('Erreur lors de la connexion (mauvais identifiants ?)');
+					}
+				});
+			});
+
+			// Gérer la déconnexion
+			$('#logoutButton').click(function() {
+				$.ajax({
+					url: 'http://localhost:31380/api/logout',
+					type: 'GET',
+					success: function(data) {
+						$('#productSection').hide();
+						$('#loginPrompt').show();
+						$('#logoutButton').hide();
+						$('#loginButton').show();
+						$('#registerButton').show();
+						alert('Vous êtes déconnecté.');
+					},
+					error: function(xhr, status, error) {
+						console.log('Error : Server Response:', xhr.responseText);
+						alert('Erreur lors de la déconnexion');
+					}
+				});
+			});
+			
+			// Charger les produits
+			function loadProducts() {
+				fetch('http://localhost:31380/api/produits')
+				.then(response => response.json())
+				.then(data => {
+					const container = document.getElementById('products');
+					data.forEach(product => {
+						const productDiv = document.createElement('div');
+						productDiv.className = 'product';
+						productDiv.innerHTML = `<h2>${product.nom}</h2><p>${product.prix} €</p>`;
+						container.appendChild(productDiv);
+					});
+				})
+				.catch(error => console.error('Error loading the products:', error));
+			}
+		});
+	</script>
 </body>
 </html>
