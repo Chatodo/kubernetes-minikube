@@ -13,10 +13,31 @@ spec:
         app: flask-api
     spec:
       containers:
-      - name: flask-api
-        image: chatodo/flask-api:latest
-        ports:
-        - containerPort: 5000
+        - name: flask-api
+          image: chatodo/flask-api:latest
+          ports:
+            - containerPort: 5000
+          env:
+            - name: MYSQL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: host
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: username
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: password
+            - name: MYSQL_DB
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: db
 
 ---
 apiVersion: v1
@@ -26,8 +47,8 @@ metadata:
 spec:
   type: NodePort
   ports:
-  - port: 5000
-    targetPort: 5000
+    - port: 5000
+      targetPort: 5000
   selector:
     app: flask-api
 
@@ -40,12 +61,12 @@ spec:
   selector:
     istio: ingressgateway
   servers:
-  - port:
-      number: 80
-      name: http
-      protocol: HTTP
-    hosts:
-    - "*"
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
 
 ---
 apiVersion: networking.istio.io/v1alpha3
@@ -54,15 +75,15 @@ metadata:
   name: flask-virtualservice
 spec:
   hosts:
-  - "*"
+    - "*"
   gateways:
-  - flask-gateway
+    - flask-gateway
   http:
-  - match:
-    - uri:
-        prefix: /api
-    route:
-    - destination:
-        host: flask-api.default.svc.cluster.local
-        port:
-          number: 5000
+    - match:
+        - uri:
+            prefix: /api
+      route:
+        - destination:
+            host: flask-api.default.svc.cluster.local
+            port:
+              number: 5000

@@ -10,15 +10,15 @@
 			max-width: 400px;
 			padding-top: 20px;
 		}
-		.product {
+		.produit {
 			margin: 10px;
 			padding: 10px;
 			border: 1px solid #ddd;
 			border-radius: 5px;
 		}
 		#loginPrompt {
-        	display: none;
-    	}
+			display: none;
+		}
 	</style>
 </head>
 <body>
@@ -35,8 +35,8 @@
 						<a class="nav-link active" aria-current="page" href="#" id="loginButton">Se connecter</a>
 					</li>
 					<li class="nav-item">
-                        <a class="nav-link" href="#" id="registerButton">S'inscrire</a>
-                    </li>
+						<a class="nav-link" href="#" id="registerButton">S'inscrire</a>
+					</li>
 					<li class="nav-item">
 						<a class="nav-link" href="#" id="logoutButton" style="display: none;">Se déconnecter</a>
 					</li>
@@ -56,7 +56,7 @@
 				<div class="modal-body">
 					<form id="loginForm">
 						<div class="mb-3">
-							<label for="email" class="form-label">Adresse-mail</label>
+							<label for="email" class="form-label">Adresse-mail / Pseudo</label>
 							<input type="text" class="form-control" id="email" required>
 						</div>
 						<div class="mb-3">
@@ -81,7 +81,7 @@
 				<div class="modal-body">
 					<form id="registerForm">
 						<div class="mb-3">
-							<label for="registerEmail" class="form-label">Adresse-mail</label>
+							<label for="registerEmail" class="form-label">Adresse-mail / Pseudo</label>
 							<input type="text" class="form-control" id="registerEmail" required>
 						</div>
 						<div class="mb-3">
@@ -96,15 +96,15 @@
 	</div>
 
 	<!-- Visible que pour les connectes -->
-	<div id="productSection" style="display: none;">
+	<div id="produitSection" style="display: none;">
 		<h1>Liste des produits</h1>
-		<div id="products"></div>
+		<div id="produits"></div>
 	</div>
 
 	<!-- Message pour non-connectes -->
-    <div id="loginPrompt" class="container text-center">
-        <h4 class="py-5">Veuillez vous connecter pour accéder aux produits.</h4>
-    </div>
+	<div id="loginPrompt" class="container text-center">
+		<h4 class="py-5">Veuillez vous connecter pour accéder aux produits.</h4>
+	</div>
 
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -129,15 +129,15 @@
 							$('#loginButton').hide();
 							$('#registerButton').hide();
 							$('#logoutButton').show();
-							$('#productSection').show();
+							$('#produitSection').show();
 							$('#loginPrompt').hide();
-							loadProducts();
+							loadproduits();
 						}
 						else {
 							$('#loginButton').show();
 							$('#registerButton').show();
 							$('#logoutButton').hide();
-							$('#productSection').hide();
+							$('#produitSection').hide();
 							$('#loginPrompt').show();
 						}
 					},
@@ -169,7 +169,7 @@
 					},
 					error: function(xhr, status, error) {
 						console.log('Error : Server Response:', xhr.responseText);
-						alert('Erreur lors de l\'inscription (email déjà utilisé ?');
+						alert('Erreur lors de l\'inscription (email/pseudo déjà utilisé');
 					}
 				});
 			});
@@ -191,8 +191,8 @@
 						if (data.success) {
 							$('#loginModal').modal('hide');
 							$('#loginPrompt').hide();
-							$('#productSection').show();
-							loadProducts();
+							$('#produitSection').show();
+							loadproduits();
 							$('#loginButton').hide();
 							$('#registerButton').hide();
 							$('#logoutButton').show();
@@ -211,7 +211,7 @@
 					url: 'http://localhost:31380/api/logout',
 					type: 'GET',
 					success: function(data) {
-						$('#productSection').hide();
+						$('#produitSection').hide();
 						$('#loginPrompt').show();
 						$('#logoutButton').hide();
 						$('#loginButton').show();
@@ -226,19 +226,16 @@
 			});
 			
 			// Charger les produits
-			function loadProducts() {
-				fetch('http://localhost:31380/api/produits')
-				.then(response => response.json())
-				.then(data => {
-					const container = document.getElementById('products');
-					data.forEach(product => {
-						const productDiv = document.createElement('div');
-						productDiv.className = 'product';
-						productDiv.innerHTML = `<h2>${product.nom}</h2><p>${product.prix} €</p>`;
-						container.appendChild(productDiv);
-					});
-				})
-				.catch(error => console.error('Error loading the products:', error));
+			function loadproduits() {
+    			$.getJSON('http://localhost:31380/api/produits', function(data) {
+        		var container = $('#produits');
+       			container.empty();
+        		$.each(data, function(index, produit) {
+            		var produitDiv = $('<div></div>').addClass('produit');
+            		produitDiv.html(`<h2>${produit.nom}</h2><p>${produit.prix} €</p>`);
+            		container.append(produitDiv);
+        			});
+    			});
 			}
 		});
 	</script>

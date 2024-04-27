@@ -8,6 +8,14 @@ https://docs.google.com/document/d/1Ki8N0ItqMbY1fsAPlTZ0nmYLW9LZNwK3USsC3wWIizU/
 - [Déploiement](#déploiement) 
 - [Utilisation](#utilisation) 
 
+`
+kubectl create secret generic mysql-secret \
+  --from-literal=host='mysql' \
+  --from-literal=username='flask' \
+  --from-literal=password='password' \
+  --from-literal=db='dbflask'
+`
+
 https://github.com/charroux/noops/tree/main/mysql#3-connexion-au-server-mysql
 
 ## Ajouter un deuxième service en local 
