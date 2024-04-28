@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, abort, session
+from flask import Flask, jsonify, request, abort, session, redirect
 from flask_mysqldb import MySQL
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_bcrypt import Bcrypt
@@ -33,12 +33,13 @@ class User(UserMixin):
 		id (int): L'id de l'utilisateur.
 		email (str): email/pseudo de l'utilisateur.
 		password (str): Mot de passe de l'utilisateur.
+		is_admin (bool): True si l'utilisateur est administrateur, False sinon.
 
 	Méthodes:
 		get_user(email): Récupère un utilisateur depuis la base de données.
 	"""
 
-	def __init__(self, id, email, password):
+	def __init__(self, id, email, password, is_admin=False):
 		"""
 		Initialise une nouvelle instance de la classe User.
 
@@ -46,10 +47,12 @@ class User(UserMixin):
 			id (int): L'ID de l'utilisateur.
 			email (str): L'email/pseudo de l'utilisateur.
 			password (str): Le mot de passe de l'utilisateur.
+			is_admin (bool): True si l'utilisateur est administrateur, False sinon.
 		"""
 		self.id = id
 		self.email = email
 		self.password = password
+		self.is_admin = is_admin
 
 	@classmethod
 	def get_user(cls, id=None, email=None):
@@ -88,7 +91,7 @@ def login():
 	if user and bcrypt.check_password_hash(user.password, data.get('password')):
 		login_user(user, remember=True)
 		session.permanent = True
-		return jsonify({'success': True, 'message': 'Connexion réussie.'})
+		return jsonify({'success': True, 'message': 'Connexion réussie.', 'is_admin': user.is_admin})
 	return jsonify({'success': False, 'message': 'Mauvais identifiants.'}), 401
 
 # Route pour s'inscrire
@@ -119,6 +122,27 @@ def logout():
 @app.route('/api/status', methods=['GET'])
 def status():
 	return jsonify({'success': current_user.is_authenticated})
+
+# Route pour changer le mot de passe / email
+@app.route('/api/profil', methods=['POST'])
+@login_required
+def profil():
+	data = request.get_json()
+	if not data:
+		abort(400)
+	cur = mysql.connection.cursor()
+	if 'email' in data:
+		cur.execute("SELECT * FROM utilisateurs WHERE email = %s", (data['email'],))
+		if cur.fetchone():
+			cur.close()
+			return jsonify({'success': False, 'message': 'Email déjà utilisé.'}), 400
+		cur.execute("UPDATE utilisateurs SET email = %s WHERE id = %s", (data['email'], current_user.id))
+	if 'password' in data:
+		hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+		cur.execute("UPDATE utilisateurs SET password = %s WHERE id = %s", (hashed_password, current_user.id))
+	mysql.connection.commit()
+	cur.close()
+	return jsonify({'success': True, 'message': 'Profil mis à jour.'})
 
 #######################################################################################################
 
@@ -176,7 +200,70 @@ def get_produits():
 	produits = Produit.get_all_produits()
 	return jsonify([{'id': p.id, 'nom': p.nom, 'prix': p.prix} for p in produits])
 
+### Route API ###
+# Admin : Ajout de produit
+@app.route('/api/produits', methods=['POST'])
+@login_required
+def add_produit():
+	if current_user.is_admin:
+		data = request.get_json()
+		if not data:
+			abort(400)
+		cur = mysql.connection.cursor()
+		cur.execute("INSERT INTO produits (nom, prix, stock) VALUES (%s, %s, %s)", (data['nom'], data['prix'], data['stock']))
+		mysql.connection.commit()
+		cur.close()
+		return jsonify({'success': True, 'message': 'Produit ajouté.'})
+	else:
+		abort(403)
+
+# Admin : Liste des utilisateurs
+@app.route('/api/users', methods=['GET'])
+@login_required
+def get_users():
+	if current_user.is_admin:
+		cur = mysql.connection.cursor()
+		cur.execute("SELECT * FROM utilisateurs")
+		result = cur.fetchall()
+		cur.close()
+		return jsonify([{'id': row[0], 'email': row[1]} for row in result])
+	else:
+		abort(403)
+
 #######################################################################################################
+# Ajout de la vérification de l'existence des tables et de la création si nécessaire
+def initialize_database():
+	with app.app_context():
+		cur = mysql.connection.cursor()
+		cur.execute("SHOW TABLES LIKE 'utilisateurs'")
+		result = cur.fetchone()
+		if not result:
+			cur.execute("""
+				CREATE TABLE utilisateurs (
+					id INT AUTO_INCREMENT PRIMARY KEY,
+					email VARCHAR(255) NOT NULL,
+					password VARCHAR(255) NOT NULL,
+			   		is_admin BOOLEAN NOT NULL DEFAULT 0
+					);
+				""")
+			admin_email = 'admin'
+			admin_password = bcrypt.generate_password_hash('admin').decode('utf-8')
+			cur.execute("INSERT INTO utilisateurs (email, password, is_admin) VALUES (%s, %s, 1)", (admin_email, admin_password))
+
+		cur.execute("SHOW TABLES LIKE 'produits'")
+		result = cur.fetchone()
+		if not result:
+			cur.execute("""
+				CREATE TABLE produits (
+					id INT AUTO_INCREMENT PRIMARY KEY,
+					nom VARCHAR(255) NOT NULL,
+					prix DECIMAL(10, 2) NOT NULL,
+					stock INT NOT NULL DEFAULT 0
+				);
+			""")
+		mysql.connection.commit()
+		cur.close()
 
 if __name__ == '__main__':
+	initialize_database()
 	app.run(host='0.0.0.0', port=5000, debug=True)

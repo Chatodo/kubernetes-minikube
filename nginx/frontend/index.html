@@ -38,6 +38,9 @@
 						<a class="nav-link" href="#" id="registerButton">S'inscrire</a>
 					</li>
 					<li class="nav-item">
+						<a class="nav-link" href="#" id="profilButton" style="display: none;">Modifier Profil</a>
+					</li>
+					<li class="nav-item">
 						<a class="nav-link" href="#" id="logoutButton" style="display: none;">Se déconnecter</a>
 					</li>
 				</ul>
@@ -70,7 +73,7 @@
 		</div>
 	</div>
 	
-	<!-- Register -->
+	<!-- Inscription -->
 	<div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
 		<div class="modal-dialog">
 			<div class="modal-content">
@@ -95,6 +98,31 @@
 		</div>
 	</div>
 
+	<!-- Mise à jour du profil -->
+	<div class="modal fade" id="profilModal" tabindex="-1" aria-labelledby="profilModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="profilModalLabel">Modifier Profil</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<form id="profileForm">
+						<div class="mb-3">
+							<label for="profileEmail" class="form-label">Nouvelle adresse e-mail/pseudo</label>
+							<input type="text" class="form-control" id="profileEmail" required>
+						</div>
+						<div class="mb-3">
+							<label for="profilePassword" class="form-label">Nouveau mot de passe</label>
+							<input type="password" class="form-control" id="profilePassword" required>
+						</div>
+						<button type="submit" class="btn btn-primary">Mettre à jour</button>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+	
 	<!-- Visible que pour les connectes -->
 	<div id="produitSection" style="display: none;">
 		<h1>Liste des produits</h1>
@@ -130,6 +158,7 @@
 							$('#registerButton').hide();
 							$('#logoutButton').show();
 							$('#produitSection').show();
+							$('#profilButton').show();
 							$('#loginPrompt').hide();
 							loadproduits();
 						}
@@ -138,6 +167,7 @@
 							$('#registerButton').show();
 							$('#logoutButton').hide();
 							$('#produitSection').hide();
+							$('#profilButton').hide();
 							$('#loginPrompt').show();
 						}
 					},
@@ -169,7 +199,7 @@
 					},
 					error: function(xhr, status, error) {
 						console.log('Error : Server Response:', xhr.responseText);
-						alert('Erreur lors de l\'inscription (email/pseudo déjà utilisé');
+						alert('Erreur lors de l\'inscription (email/pseudo déjà utilisé)');
 					}
 				});
 			});
@@ -196,6 +226,10 @@
 							$('#loginButton').hide();
 							$('#registerButton').hide();
 							$('#logoutButton').show();
+							if (data.is_admin) {
+								window.location.href = 'http://localhost:31380/admin.html';
+							}
+							checkLoginStatus();
 						}
 					},
 					error: function(xhr, status, error) {
@@ -216,6 +250,7 @@
 						$('#logoutButton').hide();
 						$('#loginButton').show();
 						$('#registerButton').show();
+						$('#profilButton').hide();
 						alert('Vous êtes déconnecté.');
 					},
 					error: function(xhr, status, error) {
@@ -227,16 +262,53 @@
 			
 			// Charger les produits
 			function loadproduits() {
-    			$.getJSON('http://localhost:31380/api/produits', function(data) {
-        		var container = $('#produits');
-       			container.empty();
-        		$.each(data, function(index, produit) {
-            		var produitDiv = $('<div></div>').addClass('produit');
-            		produitDiv.html(`<h2>${produit.nom}</h2><p>${produit.prix} €</p>`);
-            		container.append(produitDiv);
-        			});
-    			});
+				$.getJSON('http://localhost:31380/api/produits', function(data) {
+				var container = $('#produits');
+	   			container.empty();
+				$.each(data, function(index, produit) {
+					var produitDiv = $('<div></div>').addClass('produit');
+					produitDiv.html(`<h2>${produit.nom}</h2><p>${produit.prix} €</p>`);
+					container.append(produitDiv);
+					});
+				});
 			}
+
+			// Changer mot de passe / email
+			$('#profileForm').on('submit', function(event) {
+				event.preventDefault();
+				var newEmail = $('#profileEmail').val();
+				var newPassword = $('#profilePassword').val();
+				var dataToSend = {
+					email: newEmail,
+					password: newPassword
+				};
+				$.ajax({
+					url: 'http://localhost:31380/api/profil',
+					type: 'POST',
+					contentType: 'application/json',
+					data: JSON.stringify(dataToSend),
+					dataType: 'json',
+					success: function(data) {
+						console.log('Server Response:', data);
+						if (data.success) {
+							$('#profilModal').modal('hide');
+							alert('Profil mis à jour avec succès.');
+							$('#profileEmail').val('');  // Clear input after successful update
+							$('#profilePassword').val('');  // Clear input after successful update
+						} else {
+							alert('Erreur lors de la mise à jour: ' + data.message);
+						}
+					},
+					error: function(xhr, status, error) {
+						console.log('Error : Server Response:', xhr.responseText);
+						alert('Erreur lors de la mise à jour du profil.');
+					}
+				});
+			});
+
+			$('#profilButton').click(function() {
+				$('#profilModal').modal('show');
+			});
 		});
 	</script>
 </body>

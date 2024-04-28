@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Administration - Projet</title>
+    <style>
+        .container {
+            max-width: 960px;
+            margin-top: 20px;
+        }
+        .form-product, .users-list {
+            margin-top: 20px;
+        }
+        .users-list {
+            margin-bottom: 40px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Administration</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin" aria-controls="navbarAdmin" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarAdmin">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="logoutButton">Se déconnecter</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Ajout de produit -->
+        <div class="form-product">
+            <h2>Ajouter un produit</h2>
+            <form id="addProductForm">
+                <div class="mb-3">
+                    <label for="productnom" class="form-label">Nom du produit</label>
+                    <input type="text" class="form-control" id="productnom" required>
+                </div>
+                <div class="mb-3">
+                    <label for="productprix" class="form-label">Prix</label>
+                    <input type="number" class="form-control" id="productprix" step="0.01" required>
+                </div>
+                <div class="mb-3">
+                    <label for="productStock" class="form-label">Stock</label>
+                    <input type="number" class="form-control" id="productStock" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Ajouter le produit</button>
+            </form>
+        </div>
+
+        <!-- Liste des utilisateurs -->
+        <div class="users-list">
+            <h2>Liste des utilisateurs</h2>
+            <ul id="userList" class="list-group"></ul>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Gérer la déconnexion
+            $('#logoutButton').click(function() {
+                $.ajax({
+                    url: '/api/logout',
+                    type: 'GET',
+                    success: function() {
+                        alert('Vous êtes déconnecté.');
+                        window.location = '/';
+                    }
+                });
+            });
+
+            // Gérer l'ajout de produit
+            $('#addProductForm').submit(function(event) {
+                event.preventDefault();
+                var nom = $('#productnom').val();
+                var prix = $('#productprix').val();
+                var stock = $('#productStock').val();
+                var productData = { nom: nom, prix: prix, stock: stock };
+                $.ajax({
+                    url: '/api/produits',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(productData),
+                    success: function() {
+                        alert('Produit ajouté avec succès');
+                        $('#productnom').val('');
+                        $('#productprix').val('');
+                        $('#productStock').val('');
+                    },
+                    error: function(xhr, status, error) {
+						console.log('Error : Server Response:', xhr.responseText);
+                        alert('Erreur lors de l\'ajout du produit');
+                    }
+                });
+            });
+
+            // Charger la liste des utilisateurs
+            function loadUsers() {
+                $.ajax({
+                    url: '/api/users',
+                    type: 'GET',
+                    success: function(data) {
+                        var userList = $('#userList');
+                        userList.empty();
+                        data.forEach(function(user) {
+                            userList.append(`<li class="list-group-item">${user.email}</li>`);
+                        });
+                    }
+                });
+            }
+
+            loadUsers();
+        });
+    </script>
+</body>
+</html>

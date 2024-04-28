@@ -54,6 +54,14 @@ spec:
           number: 80
   - match:
     - uri:
+        exact: "/admin.html"
+    route:
+    - destination:
+        host: frontend-nginx.default.svc.cluster.local
+        port:
+          number: 80
+  - match:
+    - uri:
         prefix: "/api"
     route:
     - destination:
