@@ -15,8 +15,21 @@ kubectl create secret generic mysql-secret \
   --from-literal=password='password' \
   --from-literal=db='dbflask'
 `
+## MTLS
+![[Pasted image 20240428234224.png]]
+![[Pasted image 20240428234707.png]]
 
 https://github.com/charroux/noops/tree/main/mysql#3-connexion-au-server-mysql
+
+### Content Trust 
+`export DOCKER_CONTENT_TRUST=1`  sur bashrc
+- Lorsque vous poussez ou tirez des images, Docker signera et vérifiera automatiquement les images.
+
+![[Pasted image 20240428235725.png]]
+https://scout.docker.com/reports/org/chatodo/images
+![[Pasted image 20240428235818.png]]
+![[Pasted image 20240428235837.png]]
+
 
 ## Ajouter un deuxième service en local 
 Le deuxième service, le frontend via Nginx. 
