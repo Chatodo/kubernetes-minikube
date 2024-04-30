@@ -9,7 +9,7 @@ Projet **local** qui réunit **deux services**, **un service-mesh**, **gateways*
 - <span style="color:orange"> *Nginx* : Rôle Front-End : Affichage du contenu statique en fonction de ce que renvoie Flask </span>
 - <span style="color:violet"> *MySQL* : Stocke les informations relatives aux produits et au utilisateurs </span>
 
-*Voici un exemple d'un chemin de login réussit*
+*Voici un exemple d'un chemin de login réussi*
 
 ![](images/tldr_login.svg "petit graphe tldr")
 
@@ -22,11 +22,11 @@ kubectl create secret generic mysql-secret \
   --from-literal=password='password' \
   --from-literal=db='NOM_DB'
 ```
-<span style="color:#00b050">⚠ Après avoir initialiser ce secret, il faut <b>impérativement</b> se connecter au pod et faire les instructions de <i>la partie 3)</i> ➡ 
-<a href="https://github.com/charroux/noops/tree/main/mysql#3-connexion-au-server-mysql">ICI </a> (avec les identifiants de notre secret)
-</span>
+**<span style="color:#00b050">⚠ Après avoir initialiser ce secret, il faut <b>impérativement</b> se connecter au pod et faire les instructions de <i>la partie 3)</i> ➡ 
+<a href="https://github.com/charroux/noops/tree/main/mysql#3-connexion-au-server-mysql">ICI </a> (avec les identifiants de notre secret qu'on a initilaisé)
+</span>**
 
-⚠ Il faut <span style="color:#00b050"><b>aussi</b></span> faire les commandes dans [HTTPS](#https)
+**⚠ Il faut <span style="color:#00b050"><b>aussi</b></span> faire les commandes dans [HTTPS](#https)**
 
 
 Ensuite, on applique les déploiements suivants : 
@@ -40,18 +40,31 @@ kubectl apply -f mtls/enable-mtls.yml
 kubectl apply -f mtls/destination-rule-mtls.yml
 ```
 
-Pour finir, on exécute soit `./ingress-forward.sh` (pour avoir le *http*) ou `./ingress-forward-https.sh` (pour avoir le *https*)
+Pour finir, on exécute soit `./ingress-forward.sh` (pour avoir le *http*) 
+
+ou `./ingress-forward-https.sh` (pour avoir le *https*)
+
+---
 
 Avec `./ingress-forward-https.sh`, le résultat attendu est le suivant :
 
+Lien : https://localhost:31380/
+
 ![](images/ex_exec.png "si tout fonctionne #1")
 
-- Inscription :
+---
+**Inscription :**
+
 ![](images/inscription.png "si tout fonctionne #1")
-- Après la connexion :
+
+---
+**Après la connexion :**
+
 ![](images/test_view.png "si tout fonctionne #2")
 
-- On se connecte avec *admin* : *admin* pour accéder à une **page admin** qui permet de voir la liste des utilisateurs créés ainsi que de pouvoir ajouter un produit.
+---
+
+On se connecte avec les identifiants *admin* : *admin* pour accéder à une **page admin** qui permet de voir la liste des utilisateurs créés ainsi que de pouvoir ajouter un produit.
 Ici on ajoute un produit (celui qui est afiché pour l'utilisateur)
 ![alt text](images/admin.png)
 
@@ -81,7 +94,7 @@ Ici on ajoute un produit (celui qui est afiché pour l'utilisateur)
 * [Google Labs](#google-labs)
 
 
-# Explication en détail
+# Explication en détail du projet
 ## Les applications
 ### Flask
 1. **Gestion des Utilisateurs** :
@@ -119,11 +132,11 @@ docker build -t frontend-nginx:latest nginx/
 - Variable environment définie grâce au secret *mysql-secret*
 ```yml 
 env:
-- name: MYSQL_HOST
-	valueFrom:
-	secretKeyRef:
-		name: mysql-secret
-		key: host
+  - name: MYSQL_HOST
+    valueFrom:
+      secretKeyRef:
+        name: mysql-secret
+        key: host
 ...
 ```
 #### ServiceType 
@@ -212,7 +225,7 @@ http:
 ### Fichier : `mysql/mysql.yml`
 Fortement inspiré de cette source ➡ https://github.com/charroux/noops/tree/main/mysql
 #### Déploiement
-- Type = `Recreate`. L'ancien Pod est supprimé avant que le nouveau Pod soit créé, ce qui est particulièrement utile pour les bases de données où le maintien d'une seule instance à la fois est crucial pour éviter les conflits de données.
+- Type : `Recreate`. L'ancien Pod est supprimé avant que le nouveau Pod soit créé, utile pour les bases de données où le maintien d'une seule instance à la fois permet d'éviter les conflits de données.
 - Image Docker exécute : `mysql:5.6`
 - Exposé sur le port *3306*
 - Mot de passe défini grâce au secret *mysql-secret*
@@ -225,24 +238,29 @@ Fortement inspiré de cette source ➡ https://github.com/charroux/noops/tree/ma
 Affichage du dashboard Kiali : `istioctl dashboard kiali`
 Cela permet de visualiser le graphique de notre service avec la gateway.
 ![](images/kiali.png "kiali")
-On remarque le mTLS est bien activé 
+On remarque que mTLS est bien activé 
 ![](images/kiali_mts.png "kiali mts")
 
 ### Sécurisation image Registry
-Il faut activé dans une image de notre répertoire "*Image Analysis*"
+Il faut activé, dans une image de notre répertoire, l'option : "*Image Analysis*"
 ![](images/docker_scout.png "Docker Scout")
-Ensuite, on se redirige vers : https://scout.docker.com/reports/org/chatodo/images pour voir le rapport associé.
-Après une modification de notre *Dockerfile* on obtient le rapport suivant :
+Ensuite, je me redirige vers : https://scout.docker.com/reports/org/chatodo/images pour voir le rapport associé.
+
+Après une modification de notre *Dockerfile* "pour avoir un meilleur score" on obtient le rapport suivant :
 ![](images/scout_docker.png "Docker report")
 
 ### HTTPS
 (Tout sera fait localement)
-Tout d'abord, il est nécessaire d'obtenir un certificat pour utiliser HTTPS.
-Voici une commande qui permet de générer un certificat 
+
+Tout d'abord, il est **nécessaire** d'obtenir un certificat pour utiliser HTTPS.
+
+Voici une commande qui permet de générer un certificat :
 `openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=localhost"`
+
 Cependant, ce certificat n'étant pas certifié par une AC on aura l’avertissement de type : `err_cert_common_name_invalid`, mais en soit c'est fonctionnel.
 
 Pour éviter cela, j'ai opté pour l'utilisation de [mkcert](https://github.com/FiloSottile/mkcert)
+
 Après l'avoir installé, on effectue :
 ```
 mkcert --install
@@ -251,7 +269,7 @@ mv localhost+2.pem tls.crt
 mv localhost+2-key.pem tls.key
 ```
 
-⚠ Il faut que *istio-system* soit actif, si besoin :
+⚠ **Il faut que *istio-system* soit actif**, si besoin :
 `kubectl label namespace istio-system istio-injection=enabled --overwrite`
 
 Ensuite, on crée le secret nécessaire pour le déploiement et on le réapplique
