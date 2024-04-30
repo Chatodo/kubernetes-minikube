@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, abort, session, redirect
+from flask import Flask, jsonify, request, abort, session
 from flask_mysqldb import MySQL
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from flask_bcrypt import Bcrypt

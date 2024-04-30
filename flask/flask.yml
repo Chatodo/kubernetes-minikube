@@ -67,6 +67,15 @@ spec:
         protocol: HTTP
       hosts:
         - "*"
+    - port:
+        number: 8443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: nginx-certs
+      hosts:
+        - "*"
 
 ---
 apiVersion: networking.istio.io/v1alpha3

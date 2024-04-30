@@ -19,6 +19,9 @@
 		#loginPrompt {
 			display: none;
 		}
+		.navbar-nav .nav-item {
+    		margin-right: 20px;
+		}
 	</style>
 </head>
 <body>
@@ -30,9 +33,9 @@
 				<span class="navbar-toggler-icon"></span>
 			</button>
 			<div class="collapse navbar-collapse" id="navbarNav">
-				<ul class="navbar-nav">
+				<ul class="navbar-nav me-auto">
 					<li class="nav-item">
-						<a class="nav-link active" aria-current="page" href="#" id="loginButton">Se connecter</a>
+						<a class="nav-link" aria-current="page" href="#" id="loginButton">Se connecter</a>
 					</li>
 					<li class="nav-item">
 						<a class="nav-link" href="#" id="registerButton">S'inscrire</a>
@@ -40,6 +43,8 @@
 					<li class="nav-item">
 						<a class="nav-link" href="#" id="profilButton" style="display: none;">Modifier Profil</a>
 					</li>
+				</ul>
+				<ul class="navbar-nav ms-auto">
 					<li class="nav-item">
 						<a class="nav-link" href="#" id="logoutButton" style="display: none;">Se déconnecter</a>
 					</li>
@@ -98,7 +103,7 @@
 		</div>
 	</div>
 
-	<!-- Mise à jour du profil -->
+	<!-- Mise à jour du profil (faut être connecté d'abord) -->
 	<div class="modal fade" id="profilModal" tabindex="-1" aria-labelledby="profilModalLabel" aria-hidden="true">
 		<div class="modal-dialog">
 			<div class="modal-content">
@@ -123,22 +128,22 @@
 		</div>
 	</div>
 	
-	<!-- Visible que pour les connectes -->
+	<!-- Affichage des produits (uniquement pour les connectés) -->
 	<div id="produitSection" style="display: none;">
 		<h1>Liste des produits</h1>
 		<div id="produits"></div>
 	</div>
 
-	<!-- Message pour non-connectes -->
+	<!-- Message pour les non-connectés -->
 	<div id="loginPrompt" class="container text-center">
-		<h4 class="py-5">Veuillez vous connecter pour accéder aux produits.</h4>
+		<h4 class="py-5">Veuillez vous connecter pour accéder à la liste des produits.</h4>
 	</div>
 
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 	<script>
 		$(document).ready(function() {
-			// Ouvrir les modals
+			// Ouvrir les modals (inscription, connexion)
 			$('#registerButton').click(function() {
 				$('#registerModal').modal('show');
 			});
@@ -147,10 +152,11 @@
 			});
 
 			// Vérifier si l'utilisateur est connecté
+			// Succès: afficher produits - Echec: afficher site par défaut
 			checkLoginStatus();
 			function checkLoginStatus() {
 				$.ajax({
-					url: 'http://localhost:31380/api/status',
+					url: 'api/status',
 					type: 'GET',
 					success: function(data) {
 						if (data.success) {
@@ -177,15 +183,15 @@
 				});
 			}
 
-
-			// Gérer l'inscription
+			// Inscription + vérification si email/pseudo déjà utilisé
+			// Succès: fermer modal + alerte - Echec: alerte
 			$('#registerForm').on('submit', function(event) {
 				event.preventDefault();
 				var email = $('#registerEmail').val();
 				var password = $('#registerPassword').val();
 				var dataToSend = JSON.stringify({ email: email, password: password });
 				$.ajax({
-					url: 'http://localhost:31380/api/register',
+					url: 'api/register',
 					type: 'POST',
 					contentType: 'application/json',
 					data: dataToSend,
@@ -204,14 +210,16 @@
 				});
 			});
 
-			// Gérer la connexion
+			// Connexion
+			// Succès: fermer modal + afficher produits (checkLoginStatus) - Echec: alerte
+			// Si admin: rediriger vers admin.html
 			$('#loginForm').on('submit', function(event) {
 				event.preventDefault();
 				var email = $('#email').val();
 				var password = $('#password').val();
 				var dataToSend = JSON.stringify({ email: email, password: password });
 				$.ajax({
-					url: 'http://localhost:31380/api/login',
+					url: 'api/login',
 					type: 'POST',
 					contentType: 'application/json',
 					data: dataToSend,
@@ -227,7 +235,7 @@
 							$('#registerButton').hide();
 							$('#logoutButton').show();
 							if (data.is_admin) {
-								window.location.href = 'http://localhost:31380/admin.html';
+								window.location.href = '/admin.html';
 							}
 							checkLoginStatus();
 						}
@@ -240,9 +248,10 @@
 			});
 
 			// Gérer la déconnexion
+			// Succès: afficher message + cacher produits - Echec: alerte
 			$('#logoutButton').click(function() {
 				$.ajax({
-					url: 'http://localhost:31380/api/logout',
+					url: 'api/logout',
 					type: 'GET',
 					success: function(data) {
 						$('#produitSection').hide();
@@ -260,9 +269,9 @@
 				});
 			});
 			
-			// Charger les produits
+			// Afficher les produits sur la page
 			function loadproduits() {
-				$.getJSON('http://localhost:31380/api/produits', function(data) {
+				$.getJSON('api/produits', function(data) {
 				var container = $('#produits');
 	   			container.empty();
 				$.each(data, function(index, produit) {
@@ -273,7 +282,7 @@
 				});
 			}
 
-			// Changer mot de passe / email
+			// Si connecté -> modifier profil (email/pseudo + mot de passe)
 			$('#profileForm').on('submit', function(event) {
 				event.preventDefault();
 				var newEmail = $('#profileEmail').val();
@@ -283,7 +292,7 @@
 					password: newPassword
 				};
 				$.ajax({
-					url: 'http://localhost:31380/api/profil',
+					url: 'api/profil',
 					type: 'POST',
 					contentType: 'application/json',
 					data: JSON.stringify(dataToSend),
@@ -293,8 +302,8 @@
 						if (data.success) {
 							$('#profilModal').modal('hide');
 							alert('Profil mis à jour avec succès.');
-							$('#profileEmail').val('');  // Clear input after successful update
-							$('#profilePassword').val('');  // Clear input after successful update
+							$('#profileEmail').val('');
+							$('#profilePassword').val('');
 						} else {
 							alert('Erreur lors de la mise à jour: ' + data.message);
 						}

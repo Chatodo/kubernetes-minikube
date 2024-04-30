@@ -46,15 +46,7 @@ spec:
     - uri:
         exact: "/"
     - uri:
-        prefix: "/static"
-    route:
-    - destination:
-        host: frontend-nginx.default.svc.cluster.local
-        port:
-          number: 80
-  - match:
-    - uri:
-        exact: "/admin.html"
+        prefix: "/admin.html"
     route:
     - destination:
         host: frontend-nginx.default.svc.cluster.local

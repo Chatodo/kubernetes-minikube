@@ -1,1 +1,3 @@
 venv/
+nginx/tls.crt
+nginx/tls.key
