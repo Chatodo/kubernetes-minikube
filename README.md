@@ -4,7 +4,7 @@ Groupe : **Ivan KRIVOKUCA - Abdel Malik FOFANA**
 # TL;DR
 **Nécessaire : Docker, Kubernetes, Kubectl, Istio**
 
-Projet **local** qui réunit **deux services**, **un service-mesh**, **gateways** et une **base de données** via Kurbernetes :
+Projet **local** qui réunit **deux services**, **un service-mesh**, **gateway** et une **base de données** via Kurbernetes :
 - <span style="color:#0070c0">*Flask* : Rôle Back-End : Joue le rôle d'une l'API, gère la connectivité avec les utilisateurs et communique avec la base de données </span>
 - <span style="color:orange"> *Nginx* : Rôle Front-End : Affichage du contenu statique en fonction de ce que renvoie Flask </span>
 - <span style="color:violet"> *MySQL* : Stocke les informations relatives aux produits et au utilisateurs </span>
@@ -74,6 +74,7 @@ Ici on ajoute un produit (celui qui est afiché pour l'utilisateur)
 * [Les applications](#les-applications)
   * [Flask](#flask)
   * [Nginx](#nginx)
+  * [MySQL](#mysql)
 * [Construction des images Docker](#construction-des-images-docker)
 * [Fichier YAML](#fichier-yaml)
   * [Fichier : `flask/flask.yml`](#fichier--flaskflaskyml)
@@ -88,6 +89,7 @@ Ici on ajoute un produit (celui qui est afiché pour l'utilisateur)
     * [Déploiement](#déploiement-2)
     * [ServiceType](#servicetype-2)
 * [Sécurisation du cluster](#sécurisation-du-cluster)
+  * [RBAC](#rbac)
   * [MTLS](#mtls)
   * [Sécurisation image Registry](#sécurisation-image-registry)
   * [HTTPS](#https)
@@ -100,10 +102,11 @@ Ici on ajoute un produit (celui qui est afiché pour l'utilisateur)
 1. **Gestion des Utilisateurs** :
     - **Authentification** : Les utilisateurs peuvent se connecter et se déconnecter en utilisant des routes API dédiées. La sécurité des mots de passe est assurée par `flask_bcrypt`, qui hash les mots de passe avant leur stockage.
     - **Inscription** : Les nouveaux utilisateurs peuvent s'inscrire via une API qui enregistre leurs informations après vérification que l'email n'est pas déjà utilisé.
-    - **Gestion de Session** : Les sessions sont gérées via `flask_session` avec une configuration provenant du ficher `instance/config_session.py`
+    - **Gestion de Session** : Les sessions sont gérées via `flask_session` avec une configuration provenant du ficher `instance/config_session.py` avec un stockage de cookies qui est fait sur la machine, ce qui permet de ne pas perdre la session après un rafraîchissement de la page.
 2. **Gestion des Produits** :
     - **Liste des Produits** : Une route permet aux utilisateurs authentifiés de récupérer la liste des produits disponibles (en stock).
     - **Ajout de Produits** : Les administrateurs peuvent ajouter de nouveaux produits à la base de données via une interface API.
+---
 ### Nginx
 1. **Gestion des Utilisateurs** :
     - **Authentification et Inscription** : Des modaux Bootstrap sont utilisés pour permettre aux utilisateurs de se connecter ou de s'inscrire. Ces actions sont gérées via des appels AJAX à l'api Flask.
@@ -113,6 +116,9 @@ Ici on ajoute un produit (celui qui est afiché pour l'utilisateur)
     - **Administration** : Redirigée vers `/admin.html`. Les utilisateurs administrateurs ont la possibilité d'ajouter des produits et de voir la liste des personnes inscrites.
     - **Modification de Profil** : Les utilisateurs peuvent mettre à jour leur adresse email et leur mot de passe
     - **Déconnexion** : Un bouton permet aux utilisateurs de se déconnecter, ce qui réinitialise l'interface utilisateur.
+---
+### MySQL
+Un représentation de la base de données est présente dans le fichier : `mysql/db.sql`
 
 ## Construction des images Docker
 Construction des images Docker (également présentes sur [DockerHub](https://hub.docker.com/u/chatodo))
@@ -188,7 +194,7 @@ spec:
             port:
               number: 5000
 ```
-
+---
 ### Fichier : `nginx/nginx.yml`
 #### Déploiement
 - Replicas : 2
@@ -221,7 +227,7 @@ http:
           port:
             number: 5000
 ```
-
+---
 ### Fichier : `mysql/mysql.yml`
 Fortement inspiré de cette source ➡ https://github.com/charroux/noops/tree/main/mysql
 #### Déploiement
@@ -234,8 +240,19 @@ Fortement inspiré de cette source ➡ https://github.com/charroux/noops/tree/ma
 - **NodePort** sur le *port 3306*
 
 ## Sécurisation du cluster
+### RBAC
+Tous sont dans le namespace par défaut
+- *Flask API*
+  - Permissions : Accès aux secrets dans le namespace default.
+  - Actions permises : get (lire les secrets nécessaires pour la connexion à la base de données).
+- *MySQL*
+  - Permissions :
+    - Accès aux secrets pour les informations de connexion.
+    - Accès aux persistentvolumeclaims pour la gestion du stockage.
+  - Actions permises : get, list.
 ### MTLS
 Affichage du dashboard Kiali : `istioctl dashboard kiali`
+
 Cela permet de visualiser le graphique de notre service avec la gateway.
 ![](images/kiali.png "kiali")
 On remarque que mTLS est bien activé 

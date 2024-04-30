@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: flask-api-role
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: flask-api-rolebinding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: default  # Assurez-vous que votre déploiement utilise ce service account, ou en créez un spécifique
+roleRef:
+  kind: Role
+  name: flask-api-role
+  apiGroup: rbac.authorization.k8s.io
